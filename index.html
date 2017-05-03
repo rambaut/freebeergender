@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Normal Plot</title>
+    <meta name="description" content="">
+	<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.3.min.js" ></script>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <style type="text/css">
+    body {
+    	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+		font-weight: 300;
+    }
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        stroke-width: 1px;
+        shape-rendering: crispEdges;
+    }
+    /*.x.axis path {
+        display: none;
+    }*/
+    .line {
+        fill: none;
+        stroke: steelblue;
+        stroke-width: 3px;
+    }
+    </style>
+</head>
+
+<body>
+<form id="parameters">
+	<label for="speakers">Number of invited speakers</label>	
+	<input type="text" id="speakers"  /><br />
+	<label for="male_speakers">Number of invited male speakers</label>
+	<input type="text" id="male_speakers"  /><br />
+	<label for="attendees">Number of attendees</label>
+	<input type="text" id="attendees"  /><br />
+	<label for="free_beers">Minimum free beers per attendee per day</label>
+	<input type="text" id="free_beers"  /><br />
+	<input type="submit" value="Plot" />
+</form>
+<div id="plot"></div>
+</body>
+
+<script type="text/javascript">
+
+	$('#speakers').val("10");
+	$('#male_speakers').val("5");
+	$('#attendees').val("100");
+	$('#free_beers').val("4");
+
+	$( "#parameters" ).submit(function( event ) {
+		plot();
+		event.preventDefault();
+	});
+	
+	plot();
+	
+	function plot() {
+		var speakers = parseFloat($('#speakers').val());
+		var male_speakers = parseFloat($('#male_speakers').val());
+		var attendees = parseFloat($('#attendees').val());
+		var free_beers = parseFloat($('#free_beers').val());
+
+		var coefficient = 10.0;
+		
+		var data = [];
+		
+		getData(data, speakers, male_speakers, attendees, free_beers, coefficient); // popuate data 
+
+		console.log(data);
+		
+		// line chart based on http://bl.ocks.org/mbostock/3883245
+		var margin = {
+				top: 20,
+				right: 20,
+				bottom: 50,
+				left: 60
+			},
+			width = 960 - margin.left - margin.right,
+			height = 500 - margin.top - margin.bottom;
+
+		var x = d3.scale.log()
+			.range([0, width]);
+
+		var y = d3.scale.linear()
+			.range([height, 0]);
+
+		var xAxis = d3.svg.axis()
+			.scale(x)
+			.ticks(speakers, ",.2f")
+//    		.tickSize(6, 0);
+			.orient("bottom");
+
+		var yAxis = d3.svg.axis()
+			.scale(y)
+			.orient("left");
+
+		var line = d3.svg.line()
+			.x(function(d) {
+				return x(d.q);
+			})
+			.y(function(d) {
+				return y(d.p);
+			});
+
+		d3.select("svg").remove(); 
+
+		var svg = d3.select("#plot").append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+		x.domain([1 / (speakers - 1), speakers - 1]);
+		y.domain([0, d3.max(data, function(d) {
+			return d.p;
+		})]);
+
+		svg.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
+
+		// Add the text label for the x axis
+		svg.append("text")
+			.attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top + margin.bottom - 30) + ")")
+			.style("text-anchor", "middle")
+			.text("Gender Ratio");
+
+		svg.append("g")
+			.attr("class", "y axis")
+			.call(yAxis);
+
+		// Add the text label for the Y axis
+		svg.append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", 0 - margin.left)
+			.attr("x",0 - (height / 2))
+			.attr("dy", "1em")
+			.style("text-anchor", "middle")
+			.text("Beers per day");
+
+		svg.append("path")
+			.datum(data)
+			.attr("class", "line")
+			.attr("d", line);
+			
+	}
+
+
+
+function getData(data, speakers, male_speakers, attendees, free_beers, coefficient) {
+	for (var i = 1; i < speakers - 1; i++) {
+		ratio = i / (speakers - i - 1);
+		el = {
+			"q": ratio,
+			"p": beers(Math.log(ratio), free_beers, coefficient) * attendees
+		}
+		data.push(el)
+	};
+}
+
+function beers(x, c, a) { 
+	return ((x * x) * a) + c;   
+}
+
+</script>
+
+</html>
